@@ -1,0 +1,60 @@
+trainer: nvs_trainer
+
+train_dataset:
+  name: learnit_shapenet
+  args:
+    root_path: $load_root$/learnit_shapenet
+    category: cars
+    split: train
+    views_rng: [0, 25]
+    n_support: 1
+    n_query: 1
+    repeat: 2
+  loader:
+    batch_size: 32
+    num_workers: 8
+
+test_dataset:
+  name: learnit_shapenet
+  args:
+    root_path: $load_root$/learnit_shapenet
+    category: cars
+    split: test
+    n_support: 1
+    n_query: 1
+    repeat: 100
+  loader:
+    batch_size: 32
+    num_workers: 8
+
+model:
+  name: versatile_np
+  args:
+    tokenizer:
+      name: nvs_tokenizer
+      args: {input_size: 128, patch_size: 8}
+    self_attender:
+      name: self_attender
+      args: {dim: 512, depth: 6, n_head: 8, head_dim: 64, ff_dim: 1024}
+    cross_attender:
+      name: cross_attender
+      args: {dim: 512, depth: 3, n_head: 4, head_dim: 128, ff_dim: 512}
+    hierarchical_model:
+      name: hier_model
+      args: {depth: 4, dim_y: 512, dim_hid: 512, dim_lat: 64}
+
+train_points_per_ray: 128
+train_n_rays: 128
+render_ray_batch: 1024
+
+# resume_model: ./save/nvs_shapenet_chairs/epoch-last.pth
+
+optimizer:
+  name: adam
+  args: {lr: 1.e-4}
+max_epoch: 1000
+save_epoch: 100
+adaptive_sample_epoch: 1
+eval_epoch: 10
+
+Lambda: 0.001
