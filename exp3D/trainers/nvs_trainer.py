@@ -134,7 +134,6 @@ class NvsEvaluator(NvsTrainer):
             gt = einops.rearrange(query_imgs, 'b n c h w -> b (n h w) c')
             rays_o = einops.rearrange(rays_o, 'b n h w c -> b (n h w) c')
             rays_d = einops.rearrange(rays_d, 'b n h w c -> b (n h w) c')
-            # print(rays_o.shape, rays_d.shape)
             n_sample = self.cfg['render_ray_batch']
             pred = []
             for i in range(0, rays_o.shape[1], n_sample):
@@ -153,7 +152,6 @@ class NvsEvaluator(NvsTrainer):
         pred = torch.cat(pred, dim=1)
         pred = torch.clamp(pred, min=0.0, max=1.0)
         gt = torch.clamp(gt, min=0.0, max=1.0)
-        # print(gt.shape, pred.shape)
 
         ref = data['support_imgs'][:,0].permute(0, 2, 3, 1)
         # save_img = torch.cat([ref.view(B, 128, 128, 3), pred.view(B, 128, 128, 3), gt.view(B, 128, 128, 3)], dim=2).view(-1, 384, 3)
@@ -162,7 +160,6 @@ class NvsEvaluator(NvsTrainer):
         loss_kl = loss_kl.view(B, -1).mean(-1)
         mses = ((pred - gt)**2).view(B * N, -1).mean(dim=-1)
         psnr = (-10 * torch.log10(mses)).mean()
-        # print(psnr)
 
         return {'psnr': psnr.item(), 'loss_kl': loss_kl.mean().item()}
     
