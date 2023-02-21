@@ -120,42 +120,6 @@ class NvsTrainer(BaseTrainer):
 @register('nvs_evaluator')
 class NvsEvaluator(NvsTrainer):
 
-    def _test_time_optimization(self, hyponet, data, n_iters, n_rays=1024):
-        B, _, _, H, W = data['support_imgs'].shape
-        rays_o, rays_d = poses_to_rays(data['support_poses'], H, W, data['support_focals'])
-        
-        gt = einops.rearrange(data['support_imgs'], 'b n c h w -> b (n h w) c')
-        rays_o = einops.rearrange(rays_o, 'b n h w c -> b (n h w) c')
-        rays_d = einops.rearrange(rays_d, 'b n h w c -> b (n h w) c')
-
-        p_lst = []
-        for k, v in hyponet.params.items():
-            p = torch.nn.Parameter(v.detach())
-            p_lst.append(p)
-            hyponet.params[k] = p
-        
-        optimizer = torch.optim.Adam(p_lst, lr=1e-4)
-
-        for i_iter in range(n_iters):
-            ray_ids = np.random.choice(rays_o.shape[1], n_rays)
-            rays_o_, rays_d_, gt_ = map((lambda _: _[:, ray_ids, :]), [rays_o, rays_d, gt])
-            pred_ = volume_rendering(
-                hyponet, rays_o_, rays_d_,
-                near=data['near'][0],
-                far=data['far'][0],
-                points_per_ray=self.cfg['train_points_per_ray'],
-                use_viewdirs=hyponet.use_viewdirs,
-                rand=False,
-            )
-            mses = ((pred_ - gt_)**2).view(B, -1).mean(dim=-1)
-            optimizer.zero_grad()
-            mses.sum().backward() # sum, not mean, as every hyponet is independent, though adam doesn't care
-            optimizer.step()
-            pred_ = mses = None
-        
-        for k, p in hyponet.params.items():
-            hyponet.params[k] = p.data
-
     def _iter_step(self, data, is_train, step=0):
         assert not is_train
         data = {k: v.cuda() for k, v in data.items()}
